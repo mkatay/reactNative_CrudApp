@@ -1,17 +1,34 @@
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {data} from '../data/todos.js'
-import { useContext, useState } from "react";
+//import {data} from '../data/todos.js'
+import { useContext, useEffect, useState } from "react";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {Inter_500Medium,useFonts } from '@expo-google-fonts/inter'
 import { ThemeContext } from "@/context/ThemeContext.js";
 import Octicons from '@expo/vector-icons/Octicons';
+import Animated, { LinearTransition } from "react-native-reanimated";
+import {getTodos,storeData} from '../utils/utils.js'
+import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
+
+
 
 export default function Index() {
-  const [todos,setTodos]=useState(data.sort((a,b)=>b.id-a.id))
+  const [todos,setTodos]=useState([])
   const [text,setText]=useState('')
   const {colorScheme,setColorScheme,theme}=useContext(ThemeContext)
+  const router=useRouter()
   let [fontsLoaded] = useFonts({Inter_500Medium})
+
+  useEffect(()=>{ 
+    getTodos(setTodos)
+  },[])
+
+//mentés localstorage-be:
+  useEffect(()=>{    
+    storeData(todos)    
+  },[todos])
+
   if (!fontsLoaded)    return null;
 
   const styles=createStyles(theme,colorScheme)
@@ -34,14 +51,21 @@ export default function Index() {
   const renderItem=({item})=>{
     return(
     <View style={styles.todoItem}>
-      <Text style={[styles.todoText,item.completed && styles.completed]}
-          onPress={()=>toggleTodo(item.id)}
+
+      <Pressable   
+        style={{flex:1}}
+        onLongPress={()=>toggleTodo(item.id)}
+        onPress={()=>router.push(`./todos/${item.id}`)}
       >
-        {item.title}
-      </Text>
+        <Text style={[styles.todoText,item.completed && styles.completed]}>
+          {item.title}
+        </Text>
+      </Pressable>
+
       <Pressable onPress={()=>removeTodo(item.id)}>
         <MaterialCommunityIcons name="delete-circle" size={36} color="red" />
       </Pressable>
+
     </View>
     )
   }
@@ -65,11 +89,13 @@ export default function Index() {
           : <Octicons name="sun" size={36}  color={theme.text}/>}
         </Pressable>
       </View>
-      <FlatList 
+      <Animated.FlatList 
+        itemLayoutAnimation={LinearTransition}
         data={todos}
         renderItem={renderItem}
+        keyboardDismissMode={"on-drag"}//Amikor a felhasználó elkezdi húzni (scrollolni) a listát, a billentyűzet automatikusan eltűnik.
       />
-
+      <StatusBar style={colorScheme=='dark' ? 'light' : 'dark'}/>
     </SafeAreaView>
   );
 }
@@ -176,7 +202,7 @@ function createStyles(theme,colorScheme){
     gap:4,
     borderBottomWidth:1,
     borderBottomColor:'lightgray',
-    width:'100%'
+    width:'100%'   
   },
   todoText:{
     flex:1,
